@@ -1,46 +1,66 @@
 ﻿@page "/identity/account/login"
+
 <div class="container">
-	<div class="row">
-		<div class="col-lg-6">
-			<EditForm Enhance Model="User" OnValidSubmit="HandleLogin">
-				<DataAnnotationsValidator />
-				<ValidationSummary />
-				<div class="card">
-					<div class="card-header">Sign in to your account</div>
-					<div class="card-body">
-						<div class="form-group mt-3">
-							<label class="form-label"> Email</label>
-							<InputText @bind-Value="User.Email" class="form-control"></InputText>
-						</div>
-						<div class="form-group mt-3">
-							<label class="form-label">Password</label>
-							<InputText @bind-Value="User.Password" class="form-control"></InputText>
-						</div>
-						<div class="form-group mt-3">
-							<button class="btn btn-outline-primary float-end" type="submit">Login</button>
-						</div>
-					</div>
-				</div>
-			</EditForm>
-		</div>
-	</div>
+    <div class="row">
+        <div class="col-lg-6">
+            <EditForm Model="User" OnValidSubmit="HandleLogin">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+                <div class="card">
+                    <div class="card-header">Sign in to your account</div>
+
+                    <div class="card-body">
+                        <div class="form-group mt-3">
+                            <label>Email</label>
+                            <InputText @bind-Value="User.Email" class="form-control" />
+                        </div>
+                        <div class="form-group mt-3">
+                            <label>Password</label>
+                            <InputText type="password" @bind-Value="User.Password" class="form-control" />
+                        </div>
+
+                        @if (!string.IsNullOrEmpty(ErrorMessage))
+                        {
+                            <div class="text-danger mt-2">
+                                @ErrorMessage
+                            </div>
+                        }
+
+                        <div class="form-group mt-3">
+                            <button class="btn btn-outline-primary float-end"
+                                    type="submit"
+                                    disabled="@IsSubmitting">
+                                @(IsSubmitting ? "Signing in..." : "Login")
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </EditForm>
+        </div>
+    </div>
 </div>
-
 @code {
-	Login User = new();
-	async Task HandleLogin()
-	{
-		var result = await accountService.SignInAsync(User);
-		if(result.Flag)
-		{
-			var customAuthStateProvider = (CustomAuthenticationStateProvider)AuthStateProvider;
-			await customAuthStateProvider.UpdateAuthenticationState(new UserSession()
-				{
-					Token = result.Token,
-					RefreshToken = result.RefreshToken
-				});
-			NavManager.NavigateTo("/", forceLoad: true);
-		}
-	}
+    private Login User = new();
+    private bool IsSubmitting;
+    private string? ErrorMessage;
 
+    private async Task HandleLogin()
+    {
+        IsSubmitting = true;
+        ErrorMessage = null;
+        var result = await accountService.SignInAsync(User);
+        if (!result.Flag)
+        {
+            ErrorMessage = result.Message ?? "Invalid email or password";
+            IsSubmitting = false;
+            return;
+        }
+        var customAuthStateProvider = (CustomAuthenticationStateProvider)AuthStateProvider;
+        await customAuthStateProvider.UpdateAuthenticationState(new UserSession()
+            {
+                Token = result.Token,
+                RefreshToken = result.RefreshToken
+            });
+        NavManager.NavigateTo("/", forceLoad: true);
+    }
 }

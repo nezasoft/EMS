@@ -11,7 +11,7 @@ namespace ClientLibrary.Services.Implementation
     public class UserAccountService(GetHttpClient getHttpClient) : IUserAccountService
     {
         public const string AuthUrl = "api/authentication";
-        public async Task<GeneralResponse> CreateAsync(Register user)
+        /*public async Task<GeneralResponse> CreateAsync(Register user)
         {
             var httpClient = getHttpClient.GetPrivateHttpClient();
             var result = await httpClient.PostAsJsonAsync($"{AuthUrl}/register",user);
@@ -19,7 +19,20 @@ namespace ClientLibrary.Services.Implementation
             if (!result.IsSuccessStatusCode) return new GeneralResponse(false, "Error occured");
 
             return await result.Content.ReadFromJsonAsync<GeneralResponse>();
+        }*/
+
+        public async Task<GeneralResponse> CreateAsync(Register user)
+        {
+            var httpClient = await getHttpClient.GetPrivateHttpClient();
+            var result = await httpClient.PostAsJsonAsync($"{AuthUrl}/register",user);
+            if (!result.IsSuccessStatusCode)
+            {
+                return new GeneralResponse(false, "Error occurred");
+            }
+            var response = await result.Content.ReadFromJsonAsync<GeneralResponse>();
+            return response ?? new GeneralResponse(false, "Invalid response from server");
         }
+
 
         public Task<LoginResponse> RefreshTokenAsync(RefreshToken token)
         {

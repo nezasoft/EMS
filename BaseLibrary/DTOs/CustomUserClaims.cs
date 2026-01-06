@@ -1,9 +1,11 @@
-﻿
-namespace BaseLibrary.DTOs
-{
-    public class CustomUserClaims
-    {
-        public record CustomUserClaims(string Id=null!, string Name=null!, string Email = null!, string Role = null! );
+﻿namespace BaseLibrary.DTOs;
 
-    }
+public record CustomUserClaims(
+    string Id,
+    string Name,
+    string Email,
+    string Role
+)
+{
+
 }

@@ -3,6 +3,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using BaseLibrary.DTOs;
 using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.IdentityModel.Tokens;
 
 namespace ClientLibrary.Helpers
 {
@@ -42,30 +43,37 @@ namespace ClientLibrary.Helpers
 
         private static CustomUserClaims DecryptToken(string jwtToken)
         {
-            if (string.IsNullOrEmpty(jwtToken)) return new CustomUserClaims();
+            if (string.IsNullOrWhiteSpace(jwtToken))
+                throw new SecurityTokenException("JWT token is missing.");
+
+            //if (string.IsNullOrEmpty(jwtToken)) return new CustomUserClaims();
 
             var handler = new JwtSecurityTokenHandler();
             var token = handler.ReadJwtToken(jwtToken);
             var userId = token.Claims.FirstOrDefault(_ => _.Type == ClaimTypes.NameIdentifier);
             var name = token.Claims.FirstOrDefault(_ => _.Type == ClaimTypes.Name);
-            var email = token.Claims.FirstOrDefault(_=> _.Type == ClaimTypes.Email);
-            var role = token.Claims.FirstOrDefault(_=>_.Type==ClaimTypes.Role);
+            var email = token.Claims.FirstOrDefault(_ => _.Type == ClaimTypes.Email);
+            var role = token.Claims.FirstOrDefault(_ => _.Type == ClaimTypes.Role);
 
             return new CustomUserClaims(userId!.Value, name!.Value, email!.Value, role!.Value);
         }
-
         public static ClaimsPrincipal SetClaimPrincipal(CustomUserClaims claims)
         {
-            if (claims.Email is null) return new ClaimsPrincipal();
-            return new ClaimsPrincipal(new ClaimsIdentity(
-                new List<Claim>
-                {
-                    new(ClaimTypes.NameIdentifier, claims.Id!),
-                    new(ClaimTypes.Name, claims.Name!),
-                    new(ClaimTypes.Email, claims.Email!),
-                    new(ClaimTypes.Role, claims.Role!),
+            ArgumentNullException.ThrowIfNull(claims);
 
-                }, "JwtAuth"));
+            var identity = new ClaimsIdentity(
+                new[]
+                {
+            new Claim(ClaimTypes.NameIdentifier, claims.Id),
+            new Claim(ClaimTypes.Name, claims.Name),
+            new Claim(ClaimTypes.Email, claims.Email),
+            new Claim(ClaimTypes.Role, claims.Role)
+                },
+                authenticationType: "JwtAuth"
+            );
+
+            return new ClaimsPrincipal(identity);
         }
+
     }
 }
