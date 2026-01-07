@@ -74,7 +74,25 @@ public class UserAccountService : IUserAccountService
 
     public async Task<LoginResponse> RefreshTokenAsync(RefreshToken token)
     {
-        throw new NotImplementedException();
+        ArgumentNullException.ThrowIfNull(token);
+        try
+        {
+            var httpClient = await _getHttpClient.GetPrivateHttpClient();
+            using var response = await httpClient.PostAsJsonAsync($"{AuthUrl}/refresh-token", token);
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("Token generation failed. StatusCode={StatusCode}", response.StatusCode);
+                return new LoginResponse(false, "Token generation  failed");
+            }
+
+            return await response.Content.ReadFromJsonAsync<LoginResponse>()
+                ?? new LoginResponse(false, "Invalid server response");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred during token generation");
+            return new LoginResponse(false, "Unexpected error occurred");
+        }
     }
 
     public async Task<WeatherForecast[]> GetWeatherForecast()
