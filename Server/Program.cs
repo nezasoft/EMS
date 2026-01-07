@@ -14,7 +14,9 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 //Map JWT
 builder.Services.Configure<JwtSection>(builder.Configuration.GetSection("JwtSection"));
+
 var jwtSection = builder.Configuration.GetSection(nameof(JwtSection)).Get<JwtSection>();
+
 //JWT Bearer
 builder.Services.AddAuthentication(options =>
 {
@@ -30,7 +32,7 @@ builder.Services.AddAuthentication(options =>
         ValidateLifetime = true,
         ValidIssuer = jwtSection!.Issuer,
         ValidAudience = jwtSection.Audience,
-        IssuerSigningKey = new SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(jwtSection.Key))
+        IssuerSigningKey = new SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(jwtSection.Key!))
     };
 });
 //Map DB

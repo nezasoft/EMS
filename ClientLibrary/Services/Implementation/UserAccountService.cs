@@ -1,57 +1,93 @@
-﻿
-
-using System.Net.Http.Json;
+﻿using System.Net.Http.Json;
 using BaseLibrary.DTOs;
 using BaseLibrary.Responses;
 using ClientLibrary.Helpers;
 using ClientLibrary.Services.Contracts;
+using Microsoft.Extensions.Logging;
 
-namespace ClientLibrary.Services.Implementation
+namespace ClientLibrary.Services.Implementation;
+
+public class UserAccountService : IUserAccountService
 {
-    public class UserAccountService(GetHttpClient getHttpClient) : IUserAccountService
+    private readonly GetHttpClient _getHttpClient;
+    private readonly ILogger<UserAccountService> _logger;
+
+    private const string AuthUrl = "api/authentication";
+
+    public UserAccountService(GetHttpClient getHttpClient,ILogger<UserAccountService> logger)
     {
-        public const string AuthUrl = "api/authentication";
-        /*public async Task<GeneralResponse> CreateAsync(Register user)
+        _getHttpClient = getHttpClient;
+        _logger = logger;
+    }
+
+    public async Task<GeneralResponse> CreateAsync(Register user)
+    {
+        ArgumentNullException.ThrowIfNull(user);
+        try
         {
-            var httpClient = getHttpClient.GetPrivateHttpClient();
-            var result = await httpClient.PostAsJsonAsync($"{AuthUrl}/register",user);
-
-            if (!result.IsSuccessStatusCode) return new GeneralResponse(false, "Error occured");
-
-            return await result.Content.ReadFromJsonAsync<GeneralResponse>();
-        }*/
-
-        public async Task<GeneralResponse> CreateAsync(Register user)
-        {
-            var httpClient = await getHttpClient.GetPrivateHttpClient();
-            var result = await httpClient.PostAsJsonAsync($"{AuthUrl}/register",user);
-            if (!result.IsSuccessStatusCode)
+            var httpClient = await _getHttpClient.GetPrivateHttpClient();
+            using var response = await httpClient.PostAsJsonAsync($"{AuthUrl}/register", user);
+            if (!response.IsSuccessStatusCode)
             {
-                return new GeneralResponse(false, "Error occurred");
+                _logger.LogWarning("User registration failed. StatusCode={StatusCode}",response.StatusCode);
+                return new GeneralResponse(false, "Registration failed");
             }
-            var response = await result.Content.ReadFromJsonAsync<GeneralResponse>();
-            return response ?? new GeneralResponse(false, "Invalid response from server");
+
+            return await response.Content.ReadFromJsonAsync<GeneralResponse>()
+                ?? new GeneralResponse(false, "Invalid server response");
         }
-
-
-        public Task<LoginResponse> RefreshTokenAsync(RefreshToken token)
+        catch (Exception ex)
         {
-            throw new NotImplementedException();
+            _logger.LogError(ex, "Error occurred during user registration");
+            return new GeneralResponse(false, "Unexpected error occurred");
         }
+    }
 
-        public async Task<LoginResponse> SignInAsync(Login user)
+    public async Task<LoginResponse> SignInAsync(Login user)
+    {
+        ArgumentNullException.ThrowIfNull(user);
+
+        try
         {
-           var httpClient = getHttpClient.GetPublicHttpClient();
-            var result = await httpClient.PostAsJsonAsync($"{AuthUrl}/login", user);
-            if (!result.IsSuccessStatusCode) return new LoginResponse(false, "Error occured");
+            var httpClient = _getHttpClient.GetPublicHttpClient();
+            using var response = await httpClient.PostAsJsonAsync($"{AuthUrl}/login", user);
 
-            return await result.Content.ReadFromJsonAsync<LoginResponse>()!;
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning(
+                    "Login failed for {Email}. StatusCode={StatusCode}",
+                    user.Email,
+                    response.StatusCode);
+
+                return new LoginResponse(false, "Invalid credentials");
+            }
+
+            return await response.Content.ReadFromJsonAsync<LoginResponse>()
+                ?? new LoginResponse(false, "Invalid login response");
         }
-        public async Task<WeatherForecast[]> GetWeatherForecast()
+        catch (Exception ex)
         {
-            var httpClient = await getHttpClient.GetPrivateHttpClient();
-            var result = await httpClient.GetFromJsonAsync<WeatherForecast[]>("api/weatherforecast");
-            return result!;
+            _logger.LogError(ex, "Login error for {Email}", user.Email);
+            return new LoginResponse(false, "Authentication error");
+        }
+    }
+
+    public async Task<LoginResponse> RefreshTokenAsync(RefreshToken token)
+    {
+        throw new NotImplementedException();
+    }
+
+    public async Task<WeatherForecast[]> GetWeatherForecast()
+    {
+        try
+        {
+            var httpClient = await _getHttpClient.GetPrivateHttpClient();
+            return await httpClient.GetFromJsonAsync<WeatherForecast[]>("api/weatherforecast") ?? [];
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to fetch weather forecast");
+            return [];
         }
     }
 }
