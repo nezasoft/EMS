@@ -1,0 +1,85 @@
+﻿@page "/identity/account/register"
+@using Syncfusion.Blazor.Popups
+@layout AuthenticationLayout
+@inject SfDialogService DialogService
+<div class="container">
+	<div class="row">
+		<div class="col-lg-6 mt-4 mb-4">
+
+			<EditForm Enhance Model="User" OnValidSubmit="HandleRegistration">
+				<DataAnnotationsValidator />
+				<ValidationSummary />
+				<div class="card">
+					<div class="card-header"> Fill this form to Register</div>
+					<div class="card-body">
+						<div class="form-group">
+							<label class="form-label"> Full Name</label>
+							<InputText @bind-Value="User.FullName" class="form-control"></InputText>
+						</div>
+						<div class="form-group mt-3">
+							<label class="form-label"> Email</label>
+							<InputText @bind-Value="User.Email" class="form-control"></InputText>
+						</div>
+						<div class="form-group mt-3">
+							<label class="form-label">Password</label>
+							<InputText type="password" @bind-Value="User.Password" class="form-control"></InputText>
+						</div>
+						<div class="form-group mt-3">
+							<label>Confirm Password</label>
+							<InputText type="password" @bind-Value="User.ConfirmPassword" class="form-control"></InputText>
+						</div>
+						@if (!string.IsNullOrEmpty(errorMessage))
+						{
+							<div class="text-danger mt-2">
+								@errorMessage
+							</div>
+						}
+						<div class="form-group mt-3">
+							<button class="btn btn-outline-primary float-end"
+							type="submit"
+							disabled="@isSubmitting">
+								@(isSubmitting ? "Requesting..." : "Register")
+							</button>
+						</div>
+					</div>
+					<div class="card-footer">
+						<span class="text-center">
+							Have an account already? |
+							<a class="btn-link" href="identity/account/login">Sign In</a>
+						</span>
+					</div>
+				</div>
+			</EditForm>
+		</div>
+	</div>
+</div>
+@code {
+	private Register User = new();
+	private string? errorMessage;
+	private bool isSubmitting;
+
+	async Task HandleRegistration()
+	{
+		isSubmitting = true;
+		errorMessage = null;
+		var result = await accountService.CreateAsync(User);
+		if (result.Flag)
+		{
+			User = new();
+			errorMessage = null;
+			//errorMessage = result.Message ?? "Registration Successful!";
+			await DisplayDialog(result.Message, "Registration Successful!");
+		}
+		else
+		{
+			isSubmitting = false;
+			//errorMessage = result.Message ?? "Error occured while submitting the form";
+			await DisplayDialog(result.Message ?? "Error occured while submitting the form", "Registration Failed");
+			return;
+		}
+	}
+	private async Task DisplayDialog(string content, string title)
+	{
+		await DialogService.AlertAsync(content, title);
+	}
+}

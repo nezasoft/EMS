@@ -1,8 +1,10 @@
 ﻿@page "/identity/account/login"
-
+@using Syncfusion.Blazor.Popups
+@layout AuthenticationLayout
+@inject SfDialogService DialogService
 <div class="container">
     <div class="row">
-        <div class="col-lg-6">
+        <div class="col-lg-6 mt-4 mb-4" >
             <EditForm Model="User" OnValidSubmit="HandleLogin">
                 <DataAnnotationsValidator />
                 <ValidationSummary />
@@ -28,11 +30,17 @@
 
                         <div class="form-group mt-3">
                             <button class="btn btn-outline-primary float-end"
-                                    type="submit"
-                                    disabled="@IsSubmitting">
+                            type="submit"
+                            disabled="@IsSubmitting">
                                 @(IsSubmitting ? "Signing in..." : "Login")
                             </button>
                         </div>
+                    </div>
+                    <div class="card-footer">
+                        <span class="text-center">
+                            Dont have an account ? Create one | 
+                            <a class="btn-link" href="identity/account/register">Register</a>
+                        </span>
                     </div>
                 </div>
             </EditForm>
@@ -51,10 +59,13 @@
         var result = await accountService.SignInAsync(User);
         if (!result.Flag)
         {
-            ErrorMessage = result.Message ?? "Invalid email or password";
             IsSubmitting = false;
+            //ErrorMessage = result.Message ?? "Invalid email or password";
+            await DisplayDialog(result.Message ?? "Invalid email or password", "Login Failed");
             return;
         }
+        //ErrorMessage = result.Message ?? "Authentication Successful!";
+        await DisplayDialog(result.Message, "Login Success");
         var customAuthStateProvider = (CustomAuthenticationStateProvider)AuthStateProvider;
         await customAuthStateProvider.UpdateAuthenticationState(new UserSession()
             {
@@ -62,5 +73,9 @@
                 RefreshToken = result.RefreshToken
             });
         NavManager.NavigateTo("/", forceLoad: true);
+    }
+    private async Task DisplayDialog(string content, string title)
+    {
+        await DialogService.AlertAsync(content, title);
     }
 }
